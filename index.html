@@ -1,0 +1,839 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>local//chat</title>
+
+<style>
+:root {
+    --bg: #0b0d12;
+    --panel: #131720;
+    --border: #282e3a;
+    --text: #e8edf6;
+    --muted: #8994a7;
+    --accent: #a6f06a;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+}
+
+.app {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 280px;
+    padding: 20px;
+    background: #0e1117;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.logo span {
+    color: var(--accent);
+}
+
+.section {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.upload {
+    border: 1px dashed #414b5c;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+}
+
+.upload p {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+input[type=file] {
+    width: 100%;
+    font-size: 12px;
+}
+
+button {
+    background: #202735;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    border-color: var(--accent);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.primary {
+    background: var(--accent);
+    color: #10150c;
+    font-weight: bold;
+    border: none;
+}
+
+.status {
+    font-size: 13px;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+.settings {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.settings label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+}
+
+.settings input {
+    width: 100%;
+    accent-color: var(--accent);
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.header {
+    height: 65px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    justify-content: space-between;
+}
+
+.header small {
+    color: var(--muted);
+}
+
+.chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 25px;
+}
+
+.welcome {
+    text-align: center;
+    margin: 100px auto 0;
+    max-width: 500px;
+}
+
+.welcome h1 {
+    font-size: 30px;
+}
+
+.welcome p {
+    color: var(--muted);
+}
+
+.messages {
+    max-width: 800px;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.message {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.avatar {
+    background: #202735;
+    border-radius: 8px;
+    padding: 7px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.message.assistant .avatar {
+    background: var(--accent);
+    color: #111;
+}
+
+.bubble {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+    padding: 5px;
+}
+
+.message.user .bubble {
+    background: #1b2330;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.composer-container {
+    padding: 15px;
+    border-top: 1px solid var(--border);
+}
+
+.composer {
+    max-width: 800px;
+    margin: auto;
+    display: flex;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 10px;
+}
+
+textarea {
+    flex: 1;
+    resize: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font: inherit;
+    padding: 10px;
+    min-height: 45px;
+}
+
+.footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+}
+
+@media(max-width:700px) {
+    .sidebar {
+        width: 210px;
+    }
+
+    .welcome {
+        margin-top: 40px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+
+        <div class="logo">
+            local<span>//</span>chat
+        </div>
+
+        <div class="section">model setup</div>
+
+        <div class="upload">
+            <h3>load a GGUF model</h3>
+
+            <p>
+                select a local GGUF model file.
+                split model parts can be selected together.
+            </p>
+
+            <input
+                id="modelFiles"
+                type="file"
+                accept=".gguf"
+                multiple
+            >
+        </div>
+
+        <div class="status" id="status">
+            no model loaded
+        </div>
+
+        <div class="status" id="modelInfo">
+            waiting for model...
+        </div>
+
+        <button id="unload" disabled>
+            unload model
+        </button>
+
+        <div class="section">generation settings</div>
+
+        <div class="settings">
+
+            <div>
+                <label>
+                    temperature
+                    <span id="tempValue">0.7</span>
+                </label>
+
+                <input
+                    id="temperature"
+                    type="range"
+                    min="0"
+                    max="1.5"
+                    step="0.05"
+                    value="0.7"
+                >
+            </div>
+
+            <div>
+                <label>
+                    max tokens
+                    <span id="tokenValue">256</span>
+                </label>
+
+                <input
+                    id="maxTokens"
+                    type="range"
+                    min="32"
+                    max="1024"
+                    step="32"
+                    value="256"
+                >
+            </div>
+
+        </div>
+
+        <div style="margin-top:auto;font-size:11px;color:#687386">
+            browser-based inference<br>
+            no cloud ai api required
+        </div>
+
+    </aside>
+
+    <main class="main">
+
+        <header class="header">
+            <div>
+                <strong>private local inference</strong>
+                <br>
+                <small id="engineStatus">
+                    runtime not initialized
+                </small>
+            </div>
+        </header>
+
+        <div class="chat" id="chat">
+
+            <div class="welcome" id="welcome">
+                <h1>your ai. your hardware.</h1>
+
+                <p>
+                    upload a GGUF model from your computer
+                    to start chatting.
+                </p>
+
+                <p>
+                    smaller quantized models are more
+                    browser-friendly.
+                </p>
+            </div>
+
+            <div class="messages" id="messages"></div>
+
+        </div>
+
+        <div class="status" id="generationStatus"
+             style="padding:0 20px">
+        </div>
+
+        <div class="composer-container">
+
+            <form class="composer" id="chatForm">
+
+                <textarea
+                    id="prompt"
+                    placeholder="load a model first..."
+                    disabled
+                ></textarea>
+
+                <button
+                    class="primary"
+                    id="send"
+                    type="submit"
+                    disabled
+                >
+                    send ↗
+                </button>
+
+                <button
+                    id="stop"
+                    type="button"
+                    disabled
+                >
+                    stop
+                </button>
+
+            </form>
+
+            <div class="footer">
+                enter to send · shift + enter for newline
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script type="module">
+
+// ========================================
+// IMPORT WLLAMA
+// ========================================
+
+import { Wllama } from
+    "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.1.0/esm/index.js";
+
+const CONFIG_PATHS = {
+    default:
+        "https://cdn.jsdelivr.net/npm/@wllama/wllama@3.1.0/esm/wasm/wllama.wasm"
+};
+
+// ========================================
+// VARIABLES
+// ========================================
+
+let wllama = null;
+let modelLoaded = false;
+let generating = false;
+
+let conversation = [];
+
+let abortController = null;
+
+// ========================================
+// ELEMENTS
+// ========================================
+
+const modelFiles = document.getElementById("modelFiles");
+
+const status = document.getElementById("status");
+
+const modelInfo = document.getElementById("modelInfo");
+
+const engineStatus = document.getElementById("engineStatus");
+
+const promptInput = document.getElementById("prompt");
+
+const sendButton = document.getElementById("send");
+
+const stopButton = document.getElementById("stop");
+
+const unloadButton = document.getElementById("unload");
+
+const messages = document.getElementById("messages");
+
+const chat = document.getElementById("chat");
+
+const generationStatus =
+    document.getElementById("generationStatus");
+
+// ========================================
+// SETTINGS
+// ========================================
+
+const temperature = document.getElementById("temperature");
+
+const maxTokens = document.getElementById("maxTokens");
+
+temperature.addEventListener("input", () => {
+    document.getElementById("tempValue").textContent =
+        temperature.value;
+});
+
+maxTokens.addEventListener("input", () => {
+    document.getElementById("tokenValue").textContent =
+        maxTokens.value;
+});
+
+// ========================================
+// UPDATE UI
+// ========================================
+
+function updateUI() {
+
+    promptInput.disabled = !modelLoaded || generating;
+
+    sendButton.disabled = !modelLoaded || generating;
+
+    stopButton.disabled = !generating;
+
+    unloadButton.disabled = !modelLoaded || generating;
+
+    modelFiles.disabled = generating;
+}
+
+// ========================================
+// LOAD MODEL
+// ========================================
+
+modelFiles.addEventListener("change", async () => {
+
+    const files = Array.from(modelFiles.files);
+
+    if (!files.length) return;
+
+    if (files.some(file =>
+        !file.name.toLowerCase().endsWith(".gguf")
+    )) {
+
+        alert("please select GGUF files.");
+
+        modelFiles.value = "";
+
+        return;
+    }
+
+    // Wllama recommends split model files for
+    // avoiding browser memory / file size limitations.
+
+    if (files.some(file =>
+        file.size > 2 * 1024 * 1024 * 1024
+    )) {
+
+        alert(
+            "one of the selected files is larger than 2 GB. " +
+            "try a split GGUF model."
+        );
+
+        modelFiles.value = "";
+
+        return;
+    }
+
+    try {
+
+        status.textContent = "initializing runtime...";
+
+        engineStatus.textContent =
+            "downloading runtime files";
+
+        generationStatus.textContent =
+            "initializing llama.cpp...";
+
+        modelInfo.textContent =
+            files.map(file => file.name).join(", ");
+
+        modelLoaded = false;
+
+        updateUI();
+
+        // Create Wllama instance.
+
+        wllama = new Wllama(CONFIG_PATHS);
+
+        wllama.setCompat("default");
+
+        // Load local GGUF files.
+        // Each File object is passed to Wllama.
+
+        await wllama.loadModel(files, {
+            n_ctx: 2048,
+            n_gpu_layers: 99
+        });
+
+        modelLoaded = true;
+
+        status.textContent = "model loaded successfully";
+
+        engineStatus.textContent =
+            "wllama · local wasm inference";
+
+        generationStatus.textContent =
+            "ready to chat.";
+
+        document.getElementById("welcome").style.display =
+            "none";
+
+        promptInput.placeholder =
+            "message your local model...";
+
+        updateUI();
+
+    } catch (error) {
+
+        console.error(error);
+
+        status.textContent = "failed to load model";
+
+        engineStatus.textContent =
+            "runtime initialization failed";
+
+        generationStatus.textContent =
+            error.message || String(error);
+
+        modelLoaded = false;
+
+        updateUI();
+
+    } finally {
+
+        modelFiles.value = "";
+
+    }
+
+});
+
+// ========================================
+// ADD MESSAGE
+// ========================================
+
+function addMessage(role, text) {
+
+    document.getElementById("welcome").style.display =
+        "none";
+
+    const row = document.createElement("div");
+
+    row.className = "message " + role;
+
+    const avatar = document.createElement("div");
+
+    avatar.className = "avatar";
+
+    avatar.textContent =
+        role === "user" ? "you" : "ai";
+
+    const bubble = document.createElement("div");
+
+    bubble.className = "bubble";
+
+    bubble.textContent = text;
+
+    row.appendChild(avatar);
+
+    row.appendChild(bubble);
+
+    messages.appendChild(row);
+
+    chat.scrollTop = chat.scrollHeight;
+
+    return bubble;
+}
+
+// ========================================
+// CHAT GENERATION
+// ========================================
+
+document.getElementById("chatForm")
+.addEventListener("submit", async event => {
+
+    event.preventDefault();
+
+    const text = promptInput.value.trim();
+
+    if (!text || !modelLoaded || generating) return;
+
+    promptInput.value = "";
+
+    addMessage("user", text);
+
+    conversation.push({
+        role: "user",
+        content: text
+    });
+
+    const answer = addMessage("assistant", "");
+
+    generating = true;
+
+    abortController = new AbortController();
+
+    updateUI();
+
+    generationStatus.textContent = "generating...";
+
+    try {
+
+        // Wllama returns an async iterator when
+        // stream: true is enabled.
+
+        const stream = await wllama.createChatCompletion({
+
+            messages: conversation,
+
+            max_tokens: Number(maxTokens.value),
+
+            temperature: Number(temperature.value),
+
+            stream: true,
+
+            abortSignal: abortController.signal
+
+        });
+
+        // Read generated chunks one at a time.
+
+        for await (const chunk of stream) {
+
+            const delta =
+                chunk.choices?.[0]?.delta?.content ?? "";
+
+            if (delta) {
+
+                answer.textContent += delta;
+
+                chat.scrollTop = chat.scrollHeight;
+
+            }
+
+        }
+
+        conversation.push({
+            role: "assistant",
+            content: answer.textContent
+        });
+
+        generationStatus.textContent = "generation complete.";
+
+    } catch (error) {
+
+        console.error(error);
+
+        if (error.name === "AbortError") {
+
+            generationStatus.textContent =
+                "generation stopped.";
+
+        } else {
+
+            generationStatus.textContent =
+                "generation error: " + error.message;
+
+            conversation.pop();
+
+        }
+
+    } finally {
+
+        generating = false;
+
+        abortController = null;
+
+        updateUI();
+
+        promptInput.focus();
+
+    }
+
+});
+
+// ========================================
+// STOP GENERATION
+// ========================================
+
+stopButton.addEventListener("click", () => {
+
+    if (abortController) {
+
+        abortController.abort();
+
+    }
+
+});
+
+// ========================================
+// UNLOAD MODEL
+// ========================================
+
+unloadButton.addEventListener("click", async () => {
+
+    if (!wllama || generating) return;
+
+    try {
+
+        await wllama.exit();
+
+    } catch (error) {
+
+        console.error(error);
+
+    }
+
+    wllama = null;
+
+    modelLoaded = false;
+
+    conversation = [];
+
+    messages.innerHTML = "";
+
+    document.getElementById("welcome").style.display =
+        "block";
+
+    status.textContent = "no model loaded";
+
+    modelInfo.textContent = "waiting for model...";
+
+    engineStatus.textContent =
+        "runtime not initialized";
+
+    generationStatus.textContent = "";
+
+    promptInput.placeholder = "load a model first...";
+
+    updateUI();
+
+});
+
+// ========================================
+// ENTER TO SEND
+// ========================================
+
+promptInput.addEventListener("keydown", event => {
+
+    if (
+        event.key === "Enter" &&
+        !event.shiftKey
+    ) {
+
+        event.preventDefault();
+
+        document.getElementById("chatForm")
+            .requestSubmit();
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
